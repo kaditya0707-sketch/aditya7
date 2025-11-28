@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Study Timer App</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    table, td, th { border: 1px solid black; border-collapse: collapse; padding: 8px; }
+    #certificate {
+      display: none;
+      border: 3px solid gold;
+      padding: 20px;
+      margin-top: 20px;
+      width: 60%;
+      text-align: center;
+      background: #fff8d6;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Study Timer App</h1>
+
+  <!-- LOGIN SECTION -->
+  <div id="auth-section">
+    <h3>Login / Sign Up</h3>
+    <input id="email" placeholder="Email"/>
+    <input id="password" type="password" placeholder="Password"/>
+    <button onclick="signUp()">Sign Up</button>
+    <button onclick="login()">Login</button>
+  </div>
+
+  <!-- TIMER SECTION -->
+  <div id="timer-section" style="display:none;">
+    <h2 id="welcome"></h2>
+    <p>Time Studied: <span id="time">0</span> seconds</p>
+    <button onclick="startTimer()">Start</button>
+    <button onclick="stopTimer()">Stop</button>
+    <button onclick="showLeaderboard()">View Leaderboard</button>
+  </div>
+
+  <!-- LEADERBOARD -->
+  <div id="leaderboard" style="display:none;">
+    <h2>Leaderboard (Weekly)</h2>
+    <table id="leaderTable">
+      <tr><th>Name</th><th>Time (seconds)</th></tr>
+    </table>
+  </div>
+
+  <!-- CERTIFICATE -->
+  <div id="certificate">
+    <h2>🏆 Certificate of Achievement</h2>
+    <p>This certificate is proudly awarded to</p>
+    <h1 id="topName"></h1>
+    <p>For being the <b>Top Performer</b> of the week!</p>
+
+    <!-- ⭐ YOUR SPECIAL LINE -->
+    <h3 style="margin-top:10px; color:#e69138;"><b>You are now close to IIT 😊🔥</b></h3>
+  </div>
+
+  <!-- FIREBASE -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+  <script>
+    // ⭐ Add your Firebase configuration here
+    var firebaseConfig = {
+      apiKey: "",
+      authDomain: "",
+      databaseURL: "",
+      projectId: "",
+      storageBucket: "",
+      messagingSenderId: "",
+      appId: ""
+    };
+
+    firebase.initializeApp(firebaseConfig);
+
+    let timer = 0;
+    let interval;
+
+    // SIGN UP
+    function signUp() {
+      firebase.auth().createUserWithEmailAndPassword(
+        email.value, password.value
+      );
+      alert("Account Created!");
+    }
+
+    // LOGIN
+    function login() {
+      firebase.auth().signInWithEmailAndPassword(
+        email.value, password.value
+      ).then(user => {
+        authSection.style.display = "none";
+        timerSection.style.display = "block";
+        welcome.innerText = "Welcome " + email.value;
+        loadTime();
+      });
+    }
+
+    // LOAD SAVED TIME
+    function loadTime() {
+      let uid = firebase.auth().currentUser.uid;
+      firebase.database().ref("users/" + uid).once("value", data => {
+        timer = data.val()?.time || 0;
+        time.innerText = timer;
+      });
+    }
+
+    // START TIMER
+    function startTimer() {
+      interval = setInterval(() => {
+        timer++;
+        time.innerText = timer;
+      }, 1000);
+    }
+
+    // STOP TIMER & SAVE
+    function stopTimer() {
+      clearInterval(interval);
+      let uid = firebase.auth().currentUser.uid;
+      firebase.database().ref("users/" + uid).set({
+        email: email.value,
+        time: timer
+      });
+      alert("Time Saved!");
+    }
+
+    // LEADERBOARD + CERTIFICATE
+    function showLeaderboard() {
+      leaderboard.style.display = "block";
+
+      firebase.database().ref("users").once("value", snap => {
+        let data = snap.val();
+        let table = document.getElementById("leaderTable");
+        table.innerHTML = "<tr><th>Name</th><th>Time</th></tr>";
+
+        let arr = [];
+        for (let u in data) arr.push(data[u]);
+
+        arr.sort((a,b) => b.time - a.time);
+
+        // Fill leaderboard table
+        arr.forEach((u, index) => {
+          let row = document.createElement("tr");
+          row.innerHTML = `<td>${u.email}</td><td>${u.time}</td>`;
+          table.appendChild(row);
+        });
+
+        // SHOW TOP 1 CERTIFICATE
+        document.getElementById("topName").innerText = arr[0].email;
+        document.getElementById("certificate").style.display = "block";
+      });
+    }
+  </script>
+</body>
+</html>
